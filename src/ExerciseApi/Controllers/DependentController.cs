@@ -2,6 +2,7 @@
 using ExerciseApi.Model;
 using ExternalPackage.DataAccess.Contract;
 using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
 
 namespace ExerciseApi.Controllers
 {
@@ -18,33 +19,57 @@ namespace ExerciseApi.Controllers
 
         // POST api/dependents/{id}
         [HttpPost("{id}")]
-        public ActionResult<long> AddDependent(int id, [FromBody]Dependent dependent)
+        public async Task<ActionResult<long>> AddDependent(int id, [FromBody]Dependent dependent)
         {
+            long newDependentId = 0;
+            
             // assumption that adding a new dependent would return its id upon insertion 
-            var newDependentId = _employeeRepository.AddDependent((long) id, Hydrator.FromModel(dependent));
+            var newDependentTask = Task.Run(() =>
+            {
+                newDependentId = _employeeRepository.AddDependent((long)id, Hydrator.FromModel(dependent));
+            });
 
-            return newDependentId;
+            await Task.WhenAll(newDependentTask);
+
+            if (newDependentId == 0)
+            {
+                return BadRequest();
+            }
+
+            return Ok(newDependentId);
         }
 
         // PUT api/dependents/{id}
         [HttpPut("{id}")]
-        public ActionResult<Dependent> UpdateDependent(int id, [FromBody] Dependent dependent)
+        public async Task<ActionResult<Dependent>> UpdateDependent(int id, [FromBody] Dependent dependent)
         {
             if (id != dependent.Id)
             {
                 return BadRequest();
             }
 
-            _employeeRepository.UpdateDependent(Hydrator.FromModel(dependent));
+            var updateDependentTask = Task.Run(() =>
+            {
+                _employeeRepository.UpdateDependent(Hydrator.FromModel(dependent));
+            });
 
-            return dependent;
+            await Task.WhenAll(updateDependentTask);
+
+            return Ok(dependent);
         }
 
         // DELETE api/employees/{id}
         [HttpDelete("{id}")]
-        public void Delete(int id)
+        public async Task<ActionResult<int>> Delete(int id)
         {
-            _employeeRepository.DeleteDependent((long)id);
+            var deleteDependentTask = Task.Run(() =>
+            {
+                _employeeRepository.DeleteDependent((long)id);
+            });
+
+            await Task.WhenAll(deleteDependentTask);
+             
+            return Ok(id);
         }
     }
 }
